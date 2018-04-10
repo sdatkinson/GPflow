@@ -47,6 +47,10 @@ def gamma(shape, scale, x):
         + (shape - 1.) * tf.log(x) - x / scale
 
 
+def inverse_gamma(shape, scale, x):
+    return gamma(shape, 1.0 / scale, 1.0 / x)
+
+
 def student_t(x, mean, scale, deg_free):
     const = tf.lgamma(tf.cast((deg_free + 1.) * 0.5, settings.float_type))\
         - tf.lgamma(tf.cast(deg_free * 0.5, settings.float_type))\

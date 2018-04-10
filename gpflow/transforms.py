@@ -402,7 +402,7 @@ class LowerTriangular(Transform):
         return "LoTri->vec"
 
 
-positive = Log1pe()
+positive = Exp()
 
 
 def positiveRescale(scale):

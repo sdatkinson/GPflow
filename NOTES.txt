@@ -1,0 +1,4 @@
+Changes:
+
+* gamma prior can now optionally accept mean and variance
+* Inverse Gamma prior/ & density

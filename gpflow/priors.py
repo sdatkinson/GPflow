@@ -61,8 +61,13 @@ class LogNormal(Prior):
 
 
 class Gamma(Prior):
-    def __init__(self, shape, scale):
+    def __init__(self, shape=None, scale=None, mu=None, var=None):
         Prior.__init__(self)
+        if mu is not None and var is not None:
+            assert shape is None and scale is None, \
+                "Cannot provide both shape/scale and mean/var"
+            shape = mu ** 2 / var
+            scale = var / mu
         self.shape = np.atleast_1d(np.array(shape, settings.float_type))
         self.scale = np.atleast_1d(np.array(scale, settings.float_type))
 
@@ -74,6 +79,27 @@ class Gamma(Prior):
 
     def __str__(self):
         return "Ga("+str(self.shape) + "," + str(self.scale) + ")"
+
+
+class InverseGamma(Prior):
+    def __init__(self, shape=None, scale=None, mu=None, var=None):
+        Prior.__init__(self)
+        if mu is not None and var is not None:
+            assert shape is None and scale is None, \
+                "Cannot provide both shape/scale and mean/var"
+            shape = 2.0 + mu ** 2 / var
+            scale = mu * (1.0 + mu ** 2 / var)
+        self.shape = np.atleast_1d(np.array(shape, settings.float_type))
+        self.scale = np.atleast_1d(np.array(scale, settings.float_type))
+
+    def logp(self, x):
+        return tf.reduce_sum(densities.inverse_gamma(self.shape, self.scale, x))
+
+    def sample(self, shape=(1,)):
+        return 1.0 / np.random.gamma(self.shape, 1.0 / self.scale, size=shape)
+
+    def __str__(self):
+        return "InvGa("+str(self.shape) + "," + str(self.scale) + ")"
 
 
 class Laplace(Prior):
