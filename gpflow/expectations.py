@@ -28,6 +28,8 @@ from .probability_distributions import Gaussian, DiagonalGaussian, MarkovGaussia
 from multipledispatch import dispatch
 from functools import partial
 
+DEBUG = True
+
 # By default multipledispatch uses a global namespace in multipledispatch.core.global_namespace
 # We define our own GPflow namespace to avoid any conflict which may arise
 gpflow_md_namespace = dict()
@@ -396,9 +398,12 @@ def _expectation(p, kern1, feat1, kern2, feat2, nghp=None):
         squared_lengthscales = kern.lengthscales ** 2. if kern.ARD \
             else tf.zeros((D,), dtype=settings.tf_float) + kern.lengthscales ** 2.
 
-        sqrt_det_L = tf.reduce_prod(0.5 * squared_lengthscales) ** 0.5
+        # sqrt_det_L = tf.reduce_prod(0.5 * squared_lengthscales) ** 0.5
+        log_sqrt_det_L = 0.5 * tf.reduce_sum(tf.log(0.5 * squared_lengthscales))
         C = tf.cholesky(0.5 * tf.matrix_diag(squared_lengthscales) + Xcov)  # NxDxD
-        dets = sqrt_det_L / tf.exp(tf.reduce_sum(tf.log(tf.matrix_diag_part(C)), axis=1))  # N
+        sumlog_C = tf.reduce_sum(tf.log(tf.matrix_diag_part(C)), axis=1)
+        # dets = sqrt_det_L / tf.exp(sumlog_C)
+        dets = tf.exp(log_sqrt_det_L - sumlog_C)  # N
 
         C_inv_mu = tf.matrix_triangular_solve(C, tf.expand_dims(Xmu, 2), lower=True)  # NxDx1
         C_inv_z = tf.matrix_triangular_solve(C,
@@ -417,8 +422,15 @@ def _expectation(p, kern1, feat1, kern2, feat2, nghp=None):
         # Compute sqrt(self.K(Z)) explicitly to prevent automatic gradient from
         # being NaN sometimes, see pull request #615
         kernel_sqrt = tf.exp(-0.25 * kern.square_dist(Z, None))
-        return kern.variance ** 2 * kernel_sqrt * \
-               tf.reshape(dets, [N, 1, 1]) * exponent_mahalanobis
+
+        # Debug prints:
+        if DEBUG:
+            N = tf.Print(N, [dets], "dets:\n", summarize=9)
+            N = tf.Print(N, [exponent_mahalanobis], "ExpM:\n", summarize=9)
+
+        psi2n = kern.variance ** 2 * kernel_sqrt * \
+            tf.reshape(dets, [N, 1, 1]) * exponent_mahalanobis
+        return psi2n
 
 
 # =============================== Linear Kernel ===============================
