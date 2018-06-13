@@ -28,7 +28,7 @@ from .probability_distributions import Gaussian, DiagonalGaussian, MarkovGaussia
 from multipledispatch import dispatch
 from functools import partial
 
-DEBUG = True
+DEBUG = False
 
 # By default multipledispatch uses a global namespace in multipledispatch.core.global_namespace
 # We define our own GPflow namespace to avoid any conflict which may arise
