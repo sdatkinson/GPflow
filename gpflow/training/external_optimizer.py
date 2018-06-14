@@ -145,7 +145,8 @@ class ExternalOptimizerInterface(object):
     # Construct loss function and associated gradient.
     loss_grad_func = self._make_eval_func([self._loss,
                                            self._packed_loss_grad], session,
-                                          feed_dict, fetches, loss_callback)
+                                          feed_dict, fetches, loss_callback,
+                                          zero_infnan_tensors=[False, True])
 
     # Construct equality constraint functions and associated gradients.
     equality_funcs = self._make_eval_funcs(self._equalities, session, feed_dict,
@@ -289,11 +290,24 @@ class ExternalOptimizerInterface(object):
       return array_ops.concat(flattened, 0)
 
   def _make_eval_func(self, tensors, session, feed_dict, fetches,
-                      callback=None):
-    """Construct a function that evaluates a `Tensor` or list of `Tensor`s."""
+                      callback=None, zero_infnan_tensors=False,
+                      zero_infnan_fetches=False):
+    """
+    Construct a function that evaluates a `Tensor` or list of `Tensor`s.
+
+    Args:
+      zero_infnan_tensors: if values in tensors evaluate to infs or nans, then
+        replace the offending entries with zeros
+      zero_infnan_fetches: if values in fetches evaluate to infs or nans, then
+        replace the offending entries with zeros
+    """
     if not isinstance(tensors, list):
       tensors = [tensors]
     num_tensors = len(tensors)
+    if not isinstance(zero_infnan_tensors, list):
+      zero_infnan_tensors = [zero_infnan_tensors] * num_tensors
+    if not isinstance(zero_infnan_fetches, list):
+      zero_infnan_fetches = [zero_infnan_fetches] * len(fetches)
 
     def eval_func(x):
       """Function to evaluate a `Tensor`."""
@@ -307,6 +321,11 @@ class ExternalOptimizerInterface(object):
 
       augmented_fetch_vals = session.run(
           augmented_fetches, feed_dict=augmented_feed_dict)
+
+      for z, a in zip(zero_infnan_tensors + zero_infnan_fetches,
+                      augmented_fetch_vals):
+        if z:
+          a[np.logical_or(np.isnan(a), np.isinf(a))] = 0.0
 
       if callable(callback):
         callback(*augmented_fetch_vals[num_tensors:])
