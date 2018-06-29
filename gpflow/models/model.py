@@ -51,6 +51,10 @@ class Model(Parameterized):
         """Compute the log likelihood of the model."""
         return self.likelihood_tensor
 
+    @autoflow()
+    def compute_objective(self):
+        return self.objective
+
     def is_built(self, graph):
         is_built = super().is_built(graph)
         if is_built is not Build.YES:
