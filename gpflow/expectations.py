@@ -279,9 +279,15 @@ def _expectation(p, kern, feat, none1, none2, nghp=None):
         exponent_mahalanobis = tf.reduce_sum(tf.square(exponent_mahalanobis), 1)  # NxM
         exponent_mahalanobis = tf.exp(-0.5 * exponent_mahalanobis)  # NxM
 
-        sqrt_det_L = tf.reduce_prod(lengthscales)
-        sqrt_det_L_plus_Xcov = tf.exp(tf.reduce_sum(tf.log(tf.matrix_diag_part(chol_L_plus_Xcov)), axis=1))
-        determinants = sqrt_det_L / sqrt_det_L_plus_Xcov  # N
+        # sqrt_det_L = tf.reduce_prod(lengthscales)
+        # sqrt_det_L_plus_Xcov = tf.exp(tf.reduce_sum(tf.log(tf.matrix_diag_part(chol_L_plus_Xcov)), axis=1))
+        # determinants = sqrt_det_L / sqrt_det_L_plus_Xcov  # N
+
+        # Better numerics:
+        log_sqrt_det_L = tf.reduce_sum(tf.log(lengthscales))
+        log_sqrt_det_L_plus_Xcov = tf.reduce_sum(
+            tf.log(tf.matrix_diag_part(chol_L_plus_Xcov)), axis=1)
+        determinants = tf.exp(log_sqrt_det_L - log_sqrt_det_L_plus_Xcov)  # N
 
         return kern.variance * (determinants[:, None] * exponent_mahalanobis)
 
