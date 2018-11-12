@@ -26,9 +26,10 @@ class ProbabilityDistribution:
 
 
 class Gaussian(ProbabilityDistribution):
-    def __init__(self, mu, cov):
+    def __init__(self, mu, cov, chol_cov=None):
         self.mu = mu  # N x D
         self.cov = cov  # N x D x D
+        self.chol_cov = chol_cov
 
 
 class DiagonalGaussian(ProbabilityDistribution):
