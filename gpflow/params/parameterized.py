@@ -207,7 +207,7 @@ class Parameterized(Node):
             for data_holder in self.data_holders:
                 data_holder.fix_shape()
 
-    def assign(self, values, session=None, force=True):
+    def assign(self, values, session=None, force=True, allow_incoherent=False):
         if not isinstance(values, (dict, pd.Series)):
             raise ValueError('Input values must be either dictionary or panda '
                              'Series data structure.')
@@ -217,15 +217,25 @@ class Parameterized(Node):
         val_keys = set(values.keys())
         if not val_keys.issubset(params.keys()):
             keys_not_found = val_keys.difference(params.keys())
-            raise ValueError('Input values are not coherent with parameters. '
-                             'These keys are not found: {}.'.format(keys_not_found))
+            if not allow_incoherent:
+                raise ValueError(
+                    'Input values are not coherent with parameters. '
+                    'These keys are not found: {}.'.format(keys_not_found))
+            else:
+                print('WARNING: Input values are not coherent with parameters. '
+                    'These keys are not found: {}.'.format(keys_not_found))
         prev_values = {}
         for key in val_keys:
             try:
-                param = params[key]
-                prev_value = param.read_value().copy()
-                param.assign(values[key], session=session, force=force)
-                prev_values[key] = prev_value
+                if key in params:
+                    param = params[key]
+                    prev_value = param.read_value().copy()
+                    param.assign(values[key], session=session, force=force)
+                    prev_values[key] = prev_value
+                else:
+                    assert allow_incoherent, \
+                    "Missing key {} in params with allow_incoherent=False".\
+                    format(key)
             except (GPflowError, ValueError):
                 for rkey, rvalue in prev_values.items():
                     params[rkey].assign(rvalue, session=session, force=True)
